@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SRE Assignment - Login</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 420px;
+      margin: 60px auto;
+      padding: 0 16px;
+    }
+    h1 { font-size: 22px; }
+    label { display: block; margin-top: 12px; }
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 4px;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 16px;
+      padding: 10px 16px;
+      width: 100%;
+      cursor: pointer;
+    }
+    .error { color: #b00020; margin-top: 12px; }
+    .success { color: #0a7a2f; margin-top: 12px; }
+    .hidden { display: none; }
+    pre {
+      background: #f4f4f4;
+      padding: 10px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Login</h1>
+  <p>Default user: <code>admin</code> / <code>password123</code></p>
+
+  <form id="loginForm">
+    <label for="username">Username or Email</label>
+    <input id="username" name="username" type="text" required minlength="3" />
+
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" required minlength="6" />
+
+    <button type="submit">Login</button>
+  </form>
+
+  <div id="message" class="error"></div>
+
+  <div id="result" class="hidden">
+    <h2>Authenticated</h2>
+    <p>Token is stored and sent via Authorization header.</p>
+    <pre id="tokenBox"></pre>
+    <button id="meBtn" type="button">Call /api/me</button>
+    <button id="logoutBtn" type="button">Logout</button>
+    <pre id="meBox"></pre>
+  </div>
+
+  <script>
+    // Same origin as the UI (nginx proxies /api to the backend)
+    const API_URL = window.API_URL || '';
+    const form = document.getElementById('loginForm');
+    const message = document.getElementById('message');
+    const result = document.getElementById('result');
+    const tokenBox = document.getElementById('tokenBox');
+    const meBox = document.getElementById('meBox');
+
+    let authToken = localStorage.getItem('authToken') || '';
+
+    function showError(text) {
+      message.className = 'error';
+      message.textContent = text;
+    }
+
+    function showSuccess(text) {
+      message.className = 'success';
+      message.textContent = text;
+    }
+
+    function showAuthenticated(token, user) {
+      authToken = token;
+      localStorage.setItem('authToken', token);
+      result.classList.remove('hidden');
+      tokenBox.textContent = JSON.stringify({ token, user }, null, 2);
+    }
+
+    if (authToken) {
+      showAuthenticated(authToken, { note: 'restored from localStorage' });
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      message.textContent = '';
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (username.length < 3) {
+        showError('Username/email must be at least 3 characters');
+        return;
+      }
+      if (password.length < 6) {
+        showError('Password must be at least 6 characters');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/api/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          showError(data.error || 'Login failed');
+          return;
+        }
+
+        showSuccess(data.message);
+        showAuthenticated(data.token, data.user);
+      } catch (err) {
+        showError('Could not reach API: ' + err.message);
+      }
+    });
+
+    document.getElementById('meBtn').addEventListener('click', async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/me`, {
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
+        const data = await response.json();
+        meBox.textContent = JSON.stringify(data, null, 2);
+        if (!response.ok) showError(data.error || 'Request failed');
+      } catch (err) {
+        showError(err.message);
+      }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/logout`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${authToken}` },
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          showError(data.error || 'Logout failed');
+          return;
+        }
+        localStorage.removeItem('authToken');
+        authToken = '';
+        result.classList.add('hidden');
+        meBox.textContent = '';
+        showSuccess(data.message);
+      } catch (err) {
+        showError(err.message);
+      }
+    });
+  </script>
+</body>
+</html>
