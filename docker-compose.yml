@@ -115,12 +115,25 @@ services:
       DB_USER: root
       DB_PASSWORD: rootpassword
       DB_NAME: sre_db
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://127.0.0.1:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
 
   client:
     build: ./client
     container_name: sre-client
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     ports:
       - "8080:80"
 
