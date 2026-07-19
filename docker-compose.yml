@@ -5,6 +5,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: sre_db
+      MYSQL_USER: sre_app
+      MYSQL_PASSWORD: srepassword
     ports:
       - "3306:3306"
     volumes:
@@ -19,7 +21,17 @@ services:
       - --enforce-gtid-consistency=ON
       - --default-authentication-plugin=mysql_native_password
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-prootpassword"]
+      test:
+        [
+          "CMD",
+          "mysql",
+          "-h",
+          "127.0.0.1",
+          "-uroot",
+          "-prootpassword",
+          "-e",
+          "SELECT 1",
+        ]
       interval: 5s
       timeout: 5s
       retries: 30
@@ -112,8 +124,8 @@ services:
       PORT: 3000
       DB_HOST: mysql
       DB_PORT: 3306
-      DB_USER: root
-      DB_PASSWORD: rootpassword
+      DB_USER: sre_app
+      DB_PASSWORD: srepassword
       DB_NAME: sre_db
     healthcheck:
       test:

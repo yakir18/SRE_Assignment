@@ -3,8 +3,8 @@ const mysql = require('mysql2/promise');
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   port: Number(process.env.DB_PORT || 3306),
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'rootpassword',
+  user: process.env.DB_USER || 'sre_app',
+  password: process.env.DB_PASSWORD || 'srepassword',
   database: process.env.DB_NAME || 'sre_db',
   waitForConnections: true,
   connectionLimit: 10,

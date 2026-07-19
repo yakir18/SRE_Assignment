@@ -110,6 +110,13 @@ docker compose up --build
 
 First startup may take 1–2 minutes (image pulls + MySQL/Kafka/Debezium readiness).
 
+If MySQL auth fails (`Access denied for user ...`), reset the database volume and start clean:
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
 ### Stop / reset
 
 ```bash
@@ -235,6 +242,7 @@ On first MySQL start, `db/init.sql` automatically:
 - Creates database `sre_db`
 - Creates tables `users` and `tokens`
 - Seeds default user `admin` / `password123`
+- Creates API DB user `sre_app` / `srepassword` for container-to-container access
 - Creates Debezium replication user `debezium` / `dbz` with required privileges
 
 ---
